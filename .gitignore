@@ -1,0 +1,30 @@
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+backend/venv/
+
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables & secrets
+.env
+*.env
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Database files
+*.sqlite3
+*.db
+
+# Logs and OS files
+*.log
+Thumbs.db
+.DS_Store
