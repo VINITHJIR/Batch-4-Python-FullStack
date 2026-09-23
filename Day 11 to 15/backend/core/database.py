@@ -1,7 +1,21 @@
-from sqlalchemy import create_engine
-import os
 from dotenv import load_dotenv
-# Load variables from the .env file
+from sqlalchemy import create_engine
+from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import sessionmaker
+import os
+# Load environment variables from .env
 load_dotenv()
-database_url = os.getenv("DATABASE_URL")
-engine = create_engine(database_url)
+DATABASE_URL = os.getenv("DATABASE_URL")
+engine = create_engine(DATABASE_URL)
+SessionLocal =sessionmaker(autocommit=False,autoflush=False,bind=engine)
+# Base class for all SQLAlchemy Models
+Base = declarative_base()
+
+# Dependency (will be used in CRUD APIs later)
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
