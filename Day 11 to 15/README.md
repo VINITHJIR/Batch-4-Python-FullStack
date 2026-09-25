@@ -172,11 +172,15 @@ FastAPI provides an automatic, interactive API documentation interface accessibl
 | Method | Endpoint | Description | Payload / Params |
 |---|---|---|---|
 | `GET` | `/abi` | Health check / test endpoint | None |
-| `POST` | `/create-student` | Creates a new student record with calculated percentage | JSON body (`StudentSchema`) |
-| `GET` | `/students` | Retrieves all student records for Overview Page | Optional query params |
-| `GET` | `/students/{id}` | Retrieves a single student record by ID | Path parameter: `id` |
-| `PUT` | `/students/{id}` | Updates existing student details and recalculates marks | JSON body (`StudentSchema`) |
-| `DELETE`| `/students/{id}` | Deletes a student record by ID | Path parameter: `id` |
+| `POST` | `/register` | Registers a new user account with hashed password | JSON body (`UserRegisterSchema`) |
+| `POST` | `/login` | Authenticates user & generates signed JWT access token | JSON body (`UserLoginRequestSchema`) |
+| `GET` | `/verify-token` | Validates JWT token passed via `Authorization: Bearer` header | Header: `Authorization` |
+| `GET` | `/user/{id}` | Retrieves user profile by ID (excludes password) | Path parameter: `id` |
+| `POST` | `/create-student` | 🔒 Creates a new student record (Requires Bearer JWT) | Header: `Authorization: Bearer <token>`, Body: `StudentSchema` |
+| `GET` | `/students` | 🔒 Retrieves all student records (Requires Bearer JWT) | Header: `Authorization: Bearer <token>` |
+| `GET` | `/students/{id}` | 🔒 Retrieves a single student by ID (Requires Bearer JWT) | Header: `Authorization: Bearer <token>`, Path: `id` |
+| `PUT` | `/students/{id}` | 🔒 Updates existing student & recalculates marks (Requires Bearer JWT) | Header: `Authorization: Bearer <token>`, Body: `StudentSchema` |
+| `DELETE`| `/students/{id}` | 🔒 Deletes student record by ID (Requires Bearer JWT) | Header: `Authorization: Bearer <token>`, Path: `id` |
 
 #### Sample Request Body (`POST /create-student`):
 ```json

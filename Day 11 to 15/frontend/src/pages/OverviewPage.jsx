@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 // Import common API URLs from centralized config (NO hardcoded URLs)
 import {
   GET_ALL_STUDENTS_API,
@@ -7,6 +8,7 @@ import {
   DELETE_STUDENT_API,
 } from "../config/api";
 import "./OverviewPage.css";
+import "./AuthPages.css";
 
 // Initial form template
 const initialFormState = {
@@ -21,10 +23,20 @@ const initialFormState = {
 };
 
 const OverviewPage = () => {
+  const navigate = useNavigate();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [toast, setToast] = useState(null);
+
+  // Read stored user profile from localStorage
+  const userInfo = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("user_info") || "null");
+    } catch {
+      return null;
+    }
+  })();
 
   // Modal State for Create / Edit
   const [modalState, setModalState] = useState({
@@ -43,6 +55,16 @@ const OverviewPage = () => {
     isDeleting: false,
   });
 
+  const [token, setToken] = useState(
+    localStorage.getItem("access_token") || ""
+  );
+
+  // Helper to construct Bearer Authorization headers
+  const getAuthHeaders = () => {
+    const currentToken = localStorage.getItem("access_token") || token;
+    return currentToken ? { Authorization: `Bearer ${currentToken.trim()}` } : {};
+  };
+
   // Helper to show temporary toast messages
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -51,12 +73,35 @@ const OverviewPage = () => {
     }, 4000);
   };
 
-  // 1. Fetch Students (GET)
+  // Logout Handler - Clears localStorage and redirects to login page
+  const handleLogout = () => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user_info");
+    navigate("/login");
+  };
+
+  // 1. Fetch Students (GET - requires JWT Authorization)
   const fetchStudents = async () => {
+    const currentToken = localStorage.getItem("access_token");
+    if (!currentToken) {
+      navigate("/login");
+      return;
+    }
+
     setLoading(true);
     try {
-      const response = await fetch(GET_ALL_STUDENTS_API);
+      const response = await fetch(GET_ALL_STUDENTS_API, {
+        headers: {
+          ...getAuthHeaders(),
+        },
+      });
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("user_info");
+          navigate("/login");
+          return;
+        }
         throw new Error(`Failed to fetch students (HTTP ${response.status})`);
       }
       const result = await response.json();
@@ -71,8 +116,15 @@ const OverviewPage = () => {
   };
 
   useEffect(() => {
+    const currentToken = localStorage.getItem("access_token");
+    if (!currentToken) {
+      navigate("/login");
+      return;
+    }
     fetchStudents();
-  }, []);
+  }, [navigate]);
+
+
 
   // Open Create Modal
   const handleOpenCreate = () => {
@@ -159,6 +211,7 @@ const OverviewPage = () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...getAuthHeaders(),
           },
           body: JSON.stringify(payload),
         });
@@ -168,6 +221,7 @@ const OverviewPage = () => {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
+            ...getAuthHeaders(),
           },
           body: JSON.stringify(payload),
         });
@@ -223,6 +277,9 @@ const OverviewPage = () => {
         DELETE_STUDENT_API(deleteDialog.student.id),
         {
           method: "DELETE",
+          headers: {
+            ...getAuthHeaders(),
+          },
         }
       );
 
@@ -285,6 +342,12 @@ const OverviewPage = () => {
           <p>Batch 4 Full Stack Development • PostgreSQL & FastAPI CRUD Integration</p>
         </div>
         <div className="header-actions">
+          {userInfo && (
+            <div className="user-auth-badge">
+              <span>👤</span>
+              <span className="user-name-highlight">{userInfo.name || userInfo.email}</span>
+            </div>
+          )}
           <button
             className="btn-refresh"
             onClick={fetchStudents}
@@ -294,6 +357,13 @@ const OverviewPage = () => {
           </button>
           <button className="btn-create" onClick={handleOpenCreate}>
             + Create Student
+          </button>
+          <button
+            className="btn-logout"
+            onClick={handleLogout}
+            title="Sign out and clear session"
+          >
+            🚪 Logout
           </button>
         </div>
       </div>
@@ -310,6 +380,38 @@ const OverviewPage = () => {
           </button>
         </div>
       )}
+
+      {/* JWT Bearer Token Authorization Bar */}
+      <div className="jwt-bar">
+        <span className="jwt-label">🔐 Bearer JWT Token:</span>
+        <input
+          type="text"
+          className="jwt-input"
+          placeholder="Paste Bearer JWT token from /login API to authorize CRUD actions..."
+          value={token}
+          onChange={(e) => {
+            const val = e.target.value;
+            setToken(val);
+            if (val) {
+              localStorage.setItem("access_token", val.trim());
+            } else {
+              localStorage.removeItem("access_token");
+            }
+          }}
+        />
+        {token && (
+          <button
+            className="btn-clear-token"
+            onClick={() => {
+              setToken("");
+              localStorage.removeItem("access_token");
+              showToast("JWT token cleared.", "error");
+            }}
+          >
+            Clear Token
+          </button>
+        )}
+      </div>
 
       {/* Metric Cards */}
       <div className="stats-grid">
